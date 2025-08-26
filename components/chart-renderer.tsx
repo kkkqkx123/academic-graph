@@ -6,6 +6,18 @@ import { Button } from "@/components/ui/button"
 import { Download, RefreshCw } from "lucide-react"
 import type { ChartConfig } from "./chart-dashboard"
 
+interface ChartBar {
+  name: string
+  value: number | number[]
+  values?: number[]
+  group?: string
+  color?: string
+  borderColor?: string
+  borderWidth?: number
+  width?: number
+  segmentColors?: string[]
+}
+
 interface ChartRendererProps {
   config: ChartConfig
 }
@@ -73,7 +85,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
     const isStackedChart = chart.type === "stackedPercentage"
     console.log("[v0] Is stacked chart:", isStackedChart)
 
-    let allBars: any[] = []
+    let allBars: ChartBar[] = []
     let maxValue = 0
 
     if (isStackedChart) {

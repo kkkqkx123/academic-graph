@@ -1,5 +1,29 @@
 import { type NextRequest, NextResponse } from "next/server"
 
+// Define TypeScript interfaces for better type safety
+interface ChartBar {
+  name: string;
+  value: number;
+}
+
+interface ChartAxis {
+  label: string;
+  unit: string;
+}
+
+interface ChartConfig {
+  title: string;
+  bars: ChartBar[];
+  xAxis: ChartAxis;
+  yAxis: ChartAxis;
+  showValue: boolean;
+  valuePosition: "top" | "center";
+}
+
+interface ChartData {
+  chart: ChartConfig;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { format, chartData, config } = await request.json()
@@ -24,11 +48,21 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ error: "不支持的导出格式" }, { status: 400 })
   } catch (error) {
-    return NextResponse.json({ error: "导出失败" }, { status: 500 })
+    // Log the actual error for debugging purposes
+    console.error("Chart export error:", error)
+    
+    // Return a generic error message to avoid exposing sensitive information
+    return NextResponse.json({
+      error: "导出失败",
+      // Include error details in development mode for debugging
+      ...(process.env.NODE_ENV === 'development' && {
+        details: error instanceof Error ? error.message : String(error)
+      })
+    }, { status: 500 })
   }
 }
 
-function generateSVG(chartData: any, config: any): string {
+function generateSVG(chartData: ChartData, config: { chart: ChartConfig }): string {
   const { chart } = config
   const width = 800
   const height = 600
@@ -36,7 +70,7 @@ function generateSVG(chartData: any, config: any): string {
   const chartWidth = width - margin.left - margin.right
   const chartHeight = height - margin.top - margin.bottom
 
-  const maxValue = Math.max(...chart.bars.map((bar: any) => bar.value))
+  const maxValue = Math.max(...chart.bars.map((bar: ChartBar) => bar.value))
   const barWidth = (chartWidth / chart.bars.length) * 0.8
   const barSpacing = (chartWidth / chart.bars.length) * 0.2
 
@@ -66,7 +100,7 @@ function generateSVG(chartData: any, config: any): string {
   `
 
   // Draw bars
-  chart.bars.forEach((bar: any, index: number) => {
+  chart.bars.forEach((bar: ChartBar, index: number) => {
     const x = margin.left + index * (barWidth + barSpacing) + barSpacing / 2
     const barHeight = (bar.value / maxValue) * chartHeight
     const y = height - margin.bottom - barHeight

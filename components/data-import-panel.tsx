@@ -10,13 +10,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Upload, Download, FileText, Database, AlertCircle, CheckCircle } from "lucide-react"
-import type { ChartConfig } from "./chart-dashboard"
+import type { ChartConfig, CsvRow } from "./chart-dashboard"
 
 interface DataImportPanelProps {
   config: ChartConfig
   onConfigChange: (config: ChartConfig) => void
-  csvData: any[]
-  onCsvDataChange: (data: any[]) => void
+  csvData: CsvRow[]
+  onCsvDataChange: (data: CsvRow[]) => void
 }
 
 export function DataImportPanel({ config, onConfigChange, csvData, onCsvDataChange }: DataImportPanelProps) {
@@ -28,6 +28,20 @@ export function DataImportPanel({ config, onConfigChange, csvData, onCsvDataChan
   }>({ type: null, message: "" })
   const [isUploading, setIsUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Utility function to safely extract error message
+  const getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) {
+      return error.message
+    }
+    if (typeof error === 'string') {
+      return error
+    }
+    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+      return error.message
+    }
+    return '发生未知错误'
+  }
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
@@ -59,7 +73,7 @@ export function DataImportPanel({ config, onConfigChange, csvData, onCsvDataChan
             const valueField = Object.keys(firstRow)[1]
 
             if (nameField && valueField) {
-              const newBars = result.data.data.map((row: any) => ({
+              const newBars = result.data.data.map((row: CsvRow) => ({
                 name: row[nameField]?.toString() || "",
                 value: Number(row[valueField]) || 0,
               }))
@@ -102,7 +116,7 @@ export function DataImportPanel({ config, onConfigChange, csvData, onCsvDataChan
     } catch (error) {
       setImportStatus({
         type: "error",
-        message: "文件上传失败，请检查网络连接",
+        message: `文件上传失败，请检查网络连接: ${getErrorMessage(error)}`,
       })
     } finally {
       setIsUploading(false)
@@ -128,7 +142,7 @@ export function DataImportPanel({ config, onConfigChange, csvData, onCsvDataChan
           const valueField = keys[1]
 
           if (nameField && valueField) {
-            const newBars = csvData.map((row: any) => ({
+            const newBars = csvData.map((row: CsvRow) => ({
               name: row[nameField]?.toString() || "",
               value: Number(row[valueField]) || 0,
             }))
@@ -169,7 +183,7 @@ export function DataImportPanel({ config, onConfigChange, csvData, onCsvDataChan
     } catch (error) {
       setImportStatus({
         type: "error",
-        message: `${type.toUpperCase()}格式解析失败，请检查格式是否正确`,
+        message: `${type.toUpperCase()}格式解析失败，请检查格式是否正确: ${getErrorMessage(error)}`,
       })
     }
   }
@@ -183,7 +197,7 @@ export function DataImportPanel({ config, onConfigChange, csvData, onCsvDataChan
 
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(",").map((v) => v.trim().replace(/"/g, ""))
-      const row: any = {}
+      const row: CsvRow = {}
 
       headers.forEach((header, index) => {
         const value = values[index] || ""

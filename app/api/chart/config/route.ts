@@ -9,8 +9,8 @@ export async function GET() {
     try {
       const configData = await fs.readFile(configPath, "utf-8")
       return NextResponse.json(JSON.parse(configData))
-    } catch (error) {
-      // Return default config if file doesn't exist
+    } catch {
+      // Return default config if file doesn't exist or can't be read
       const defaultConfig = {
         chart: {
           type: "bar",
@@ -27,7 +27,8 @@ export async function GET() {
       }
       return NextResponse.json(defaultConfig)
     }
-  } catch (error) {
+  } catch (err) {
+    console.error("Failed to read chart config:", err)
     return NextResponse.json({ error: "配置文件读取失败" }, { status: 500 })
   }
 }
@@ -35,6 +36,12 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const config = await request.json()
+    
+    // Basic validation of config structure
+    if (!config || typeof config !== 'object') {
+      return NextResponse.json({ error: "无效的配置数据" }, { status: 400 })
+    }
+    
     const configPath = path.join(process.cwd(), "config", "chart-config.json")
 
     // Ensure config directory exists
@@ -42,7 +49,8 @@ export async function POST(request: NextRequest) {
 
     await fs.writeFile(configPath, JSON.stringify(config, null, 2))
     return NextResponse.json({ success: true, message: "配置保存成功" })
-  } catch (error) {
+  } catch (err) {
+    console.error("Failed to save chart config:", err)
     return NextResponse.json({ error: "配置保存失败" }, { status: 500 })
   }
 }

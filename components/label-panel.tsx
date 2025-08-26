@@ -141,7 +141,7 @@ export function LabelPanel({ config, onConfigChange }: LabelPanelProps) {
                 <Select
                   value={selectedLabel.scope}
                   onValueChange={(value) => {
-                    const updates: any = { scope: value }
+                    const updates: { scope: string; color?: string } = { scope: value }
                     // When scope is column-specific, align color with column color
                     if (value.startsWith("column")) {
                       const columnIndex = Number.parseInt(value.replace("column", "")) - 1

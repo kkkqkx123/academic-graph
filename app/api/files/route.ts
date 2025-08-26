@@ -29,7 +29,8 @@ export async function GET() {
             config: config,
           })
         } catch (error) {
-          // Skip invalid files
+          // Skip invalid files but log the error for debugging
+          console.error(`Error processing file ${file}:`, error);
           continue
         }
       }
@@ -40,6 +41,7 @@ export async function GET() {
 
     return NextResponse.json({ success: true, projects })
   } catch (error) {
+    console.error("Error fetching projects list:", error);
     return NextResponse.json({ error: "获取项目列表失败" }, { status: 500 })
   }
 }
@@ -77,6 +79,7 @@ export async function POST(request: NextRequest) {
       id: filename.replace(".json", ""),
     })
   } catch (error) {
+    console.error("Error saving project:", error);
     return NextResponse.json({ error: "项目保存失败" }, { status: 500 })
   }
 }

@@ -11,7 +11,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
     const config = JSON.parse(content)
 
     return NextResponse.json({ success: true, config })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "项目加载失败" }, { status: 404 })
   }
 }
@@ -28,14 +28,14 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     try {
       const existingContent = await fs.readFile(filePath, "utf-8")
       existingData = JSON.parse(existingContent)
-    } catch (error) {
+    } catch {
       // File doesn't exist, create new
     }
 
     const updatedData = {
       ...config,
       metadata: {
-        ...(existingData as any).metadata,
+        ...(existingData as { metadata?: Record<string, unknown> }).metadata,
         updatedAt: new Date().toISOString(),
       },
     }
@@ -43,7 +43,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     await fs.writeFile(filePath, JSON.stringify(updatedData, null, 2))
 
     return NextResponse.json({ success: true, message: "项目更新成功" })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "项目更新失败" }, { status: 500 })
   }
 }
@@ -56,7 +56,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     await fs.unlink(filePath)
 
     return NextResponse.json({ success: true, message: "项目删除成功" })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "项目删除失败" }, { status: 500 })
   }
 }

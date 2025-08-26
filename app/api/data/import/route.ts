@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     } else {
       return NextResponse.json({ error: "不支持的文件格式" }, { status: 400 })
     }
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: "文件导入失败" }, { status: 500 })
   }
 }
@@ -41,7 +41,7 @@ function parseCSV(content: string) {
 
   for (let i = 1; i < lines.length; i++) {
     const values = lines[i].split(",").map((v) => v.trim())
-    const row: any = {}
+    const row: Record<string, string | number> = {}
 
     headers.forEach((header, index) => {
       const value = values[index]

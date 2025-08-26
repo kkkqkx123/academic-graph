@@ -15,12 +15,12 @@ interface ChartConfigPanelProps {
 }
 
 export function ChartConfigPanel({ config, onConfigChange }: ChartConfigPanelProps) {
-  const updateConfig = (path: string[], value: any) => {
+  const updateConfig = (path: string[], value: unknown) => {
     const newConfig = { ...config }
-    let current = newConfig as any
+    let current = newConfig as Record<string, unknown>
 
     for (let i = 0; i < path.length - 1; i++) {
-      current = current[path[i]]
+      current = current[path[i]] as Record<string, unknown>
     }
     current[path[path.length - 1]] = value
 
@@ -60,7 +60,7 @@ export function ChartConfigPanel({ config, onConfigChange }: ChartConfigPanelPro
     updateConfig(["chart", "bars"], newBars)
   }
 
-  const updateGroup = (index: number, field: string, value: any) => {
+  const updateGroup = (index: number, field: string, value: string | number) => {
     const newGroups = [...(config.chart.groups || [])]
     const oldName = newGroups[index].name
     newGroups[index] = { ...newGroups[index], [field]: value }
@@ -107,27 +107,12 @@ export function ChartConfigPanel({ config, onConfigChange }: ChartConfigPanelPro
     updateConfig(["chart", "bars"], newBars)
   }
 
-  const updateBar = (index: number, field: string, value: any) => {
+  const updateBar = (index: number, field: string, value: string | number | string[] | number[] | boolean) => {
     const newBars = [...config.chart.bars]
     newBars[index] = { ...newBars[index], [field]: value }
     updateConfig(["chart", "bars"], newBars)
   }
 
-  const handleStackedValueChange = (index: number, valueStr: string) => {
-    try {
-      const values = valueStr
-        .split(",")
-        .map((v) => {
-          const trimmed = v.trim()
-          // Support both integers and decimals
-          return trimmed.includes(".") ? Number.parseFloat(trimmed) : Number.parseInt(trimmed, 10)
-        })
-        .filter((v) => !isNaN(v))
-      updateBar(index, "value", values.length > 0 ? values : [0])
-    } catch {
-      updateBar(index, "value", [0])
-    }
-  }
 
   const addStackedValue = (barIndex: number) => {
     const bar = config.chart.bars[barIndex]
@@ -151,7 +136,7 @@ export function ChartConfigPanel({ config, onConfigChange }: ChartConfigPanelPro
 
     // Remove corresponding color
     const currentColors = bar.segmentColors || []
-    const newColors = currentColors.filter((_, i) => i !== valueIndex)
+    const newColors = currentColors.filter((_: string, i: number) => i !== valueIndex)
     updateBar(barIndex, "segmentColors", newColors)
   }
 
@@ -180,7 +165,19 @@ export function ChartConfigPanel({ config, onConfigChange }: ChartConfigPanelPro
       acc[groupName].push({ ...bar, originalIndex: index })
       return acc
     },
-    {} as Record<string, Array<any>>,
+    {} as Record<string, Array<{
+      name: string;
+      value: number | number[];
+      group?: string;
+      originalIndex: number;
+      color?: string;
+      borderColor?: string;
+      borderWidth?: number;
+      fillPattern?: "solid" | "grid" | "diagonal" | "hollow";
+      width?: number;
+      shape?: "rectangle" | "rounded";
+      segmentColors?: string[];
+    }>>,
   )
 
   return (

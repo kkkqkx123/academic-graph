@@ -10,16 +10,28 @@ import { StylePanel } from "./style-panel"
 import { FileManagementPanel } from "./file-management-panel"
 import { LabelPanel } from "./label-panel"
 
+export interface CsvRow {
+  [key: string]: string | number | boolean | null | undefined
+}
+
 export interface ChartConfig {
   chart: {
     type: "bar" | "stacked-percentage"
     title: string
+    titleFont?: {
+      family?: string
+      size?: number
+      color?: string
+    }
     xAxis: {
       label: string
       unit: string
       range: [number, number]
       useDecimal: boolean
       treatAsNumeric: boolean // Added to clarify numeric vs string treatment
+      fontFamily?: string
+      fontSize?: number
+      color?: string
     }
     yAxis: {
       label: string
@@ -27,6 +39,9 @@ export interface ChartConfig {
       range: [number, number]
       usePercent: boolean
       treatAsNumeric: boolean
+      fontFamily?: string
+      fontSize?: number
+      color?: string
     }
     bars: Array<{
       name: string
@@ -38,7 +53,7 @@ export interface ChartConfig {
       width?: number
       shape?: "rectangle" | "rounded"
       group?: string
-      stackColors?: string[] // Added for individual stacked segment colors
+      segmentColors?: string[] // Changed from stackColors to segmentColors to match usage
     }>
     groups?: Array<{
       name: string
@@ -57,6 +72,14 @@ export interface ChartConfig {
       max: number
       enabled: boolean
     }
+    showValue?: boolean
+    showDataLabels?: boolean
+    dataLabelFont?: {
+      family?: string
+      size?: number
+      color?: string
+    }
+    valuePosition?: "top" | "middle"
   }
   labels: Array<{
     id: string
@@ -143,7 +166,7 @@ const defaultConfig: ChartConfig = {
 
 export function ChartDashboard() {
   const [config, setConfig] = useState<ChartConfig>(defaultConfig)
-  const [csvData, setCsvData] = useState<any[]>([])
+  const [csvData, setCsvData] = useState<CsvRow[]>([])
 
   return (
     <div className="container mx-auto p-6 space-y-6">

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -46,7 +46,21 @@ export function FileManagementPanel({ config, onConfigChange }: FileManagementPa
     message: string
   }>({ type: null, message: "" })
 
-  const loadProjects = async () => {
+  // Utility function to safely extract error message
+  const getErrorMessage = (error: unknown): string => {
+    if (error instanceof Error) {
+      return error.message
+    }
+    if (typeof error === 'string') {
+      return error
+    }
+    if (error && typeof error === 'object' && 'message' in error && typeof error.message === 'string') {
+      return error.message
+    }
+    return '发生未知错误'
+  }
+
+  const loadProjects = useCallback(async () => {
     setIsLoading(true)
     try {
       const response = await fetch("/api/files")
@@ -58,13 +72,13 @@ export function FileManagementPanel({ config, onConfigChange }: FileManagementPa
         setStatus({ type: "error", message: result.error || "加载项目失败" })
       }
     } catch (error) {
-      setStatus({ type: "error", message: "网络错误，请检查连接" })
+      setStatus({ type: "error", message: `网络错误，请检查连接: ${getErrorMessage(error)}` })
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [])
 
-  const saveProject = async () => {
+  const saveProject = useCallback(async () => {
     if (!projectName.trim()) {
       setStatus({ type: "error", message: "请输入项目名称" })
       return
@@ -91,13 +105,13 @@ export function FileManagementPanel({ config, onConfigChange }: FileManagementPa
         setStatus({ type: "error", message: result.error || "保存失败" })
       }
     } catch (error) {
-      setStatus({ type: "error", message: "保存失败，请检查网络连接" })
+      setStatus({ type: "error", message: `保存失败，请检查网络连接: ${getErrorMessage(error)}` })
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [config, projectName, loadProjects])
 
-  const loadProject = async (projectId: string) => {
+  const loadProject = useCallback(async (projectId: string) => {
     setIsLoading(true)
     try {
       const response = await fetch(`/api/files/${projectId}`)
@@ -110,13 +124,13 @@ export function FileManagementPanel({ config, onConfigChange }: FileManagementPa
         setStatus({ type: "error", message: result.error || "加载失败" })
       }
     } catch (error) {
-      setStatus({ type: "error", message: "加载失败，请检查网络连接" })
+      setStatus({ type: "error", message: `加载失败，请检查网络连接: ${getErrorMessage(error)}` })
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [onConfigChange])
 
-  const deleteProject = async (projectId: string) => {
+  const deleteProject = useCallback(async (projectId: string) => {
     if (!confirm("确定要删除这个项目吗？此操作不可撤销。")) {
       return
     }
@@ -136,11 +150,11 @@ export function FileManagementPanel({ config, onConfigChange }: FileManagementPa
         setStatus({ type: "error", message: result.error || "删除失败" })
       }
     } catch (error) {
-      setStatus({ type: "error", message: "删除失败，请检查网络连接" })
+      setStatus({ type: "error", message: `删除失败，请检查网络连接: ${getErrorMessage(error)}` })
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [loadProjects])
 
   const exportProject = (project: Project) => {
     const dataStr = JSON.stringify(project.config, null, 2)
@@ -170,7 +184,7 @@ export function FileManagementPanel({ config, onConfigChange }: FileManagementPa
 
   useEffect(() => {
     loadProjects()
-  }, [])
+  }, [loadProjects])
 
   return (
     <div className="space-y-6">
@@ -324,7 +338,7 @@ export function FileManagementPanel({ config, onConfigChange }: FileManagementPa
                         onConfigChange(importedConfig)
                         setStatus({ type: "success", message: "配置导入成功" })
                       } catch (error) {
-                        setStatus({ type: "error", message: "配置文件格式错误" })
+                        setStatus({ type: "error", message: `配置文件格式错误: ${getErrorMessage(error)}` })
                       }
                     }
                   }

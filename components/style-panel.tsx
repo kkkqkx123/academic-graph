@@ -88,7 +88,7 @@ const fontOptions = [
 ]
 
 export function StylePanel({ config, onConfigChange }: StylePanelProps) {
-  const updateStyle = (key: string, value: any) => {
+  const updateStyle = (key: string, value: string | number | boolean) => {
     const newConfig = {
       ...config,
       style: {
@@ -99,18 +99,7 @@ export function StylePanel({ config, onConfigChange }: StylePanelProps) {
     onConfigChange(newConfig)
   }
 
-  const updateAdvancedStyle = (path: string[], value: any) => {
-    const newConfig = { ...config }
-    let current = newConfig as any
 
-    for (let i = 0; i < path.length - 1; i++) {
-      if (!current[path[i]]) current[path[i]] = {}
-      current = current[path[i]]
-    }
-    current[path[path.length - 1]] = value
-
-    onConfigChange(newConfig)
-  }
 
   const applyTheme = (themeKey: string) => {
     updateStyle("theme", themeKey)
