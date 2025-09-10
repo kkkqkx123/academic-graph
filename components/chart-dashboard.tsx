@@ -118,14 +118,14 @@ const defaultConfig: ChartConfig = {
     yAxis: {
       label: "Y轴",
       unit: "单位",
-      range: [0, 50],
+      range: [0, 1],
       usePercent: false,
       treatAsNumeric: true,
     },
     bars: [
-      { name: "A", value: 10, group: "group1" },
-      { name: "B", value: 20, group: "group1" },
-      { name: "C", value: 30, group: "group2" },
+      { name: "A", value: 0.3, group: "group1" },
+      { name: "B", value: 0.6, group: "group1" },
+      { name: "C", value: 0.9, group: "group2" },
     ],
     groups: [
       { name: "group1", color: "#3b82f6" },
@@ -141,8 +141,8 @@ const defaultConfig: ChartConfig = {
     },
     globalLimits: {
       min: 0,
-      max: 100,
-      enabled: false,
+      max: 1,
+      enabled: true,
     },
   },
   labels: [

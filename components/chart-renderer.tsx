@@ -53,7 +53,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
     if (!svgRef.current) return
 
     const svg = svgRef.current
-    const { chart, style, labels } = config
+    const { chart, style } = config
 
     console.log("[v0] Chart type:", chart.type)
     console.log("[v0] Chart bars:", chart.bars)
@@ -146,8 +146,15 @@ export function ChartRenderer({ config }: ChartRendererProps) {
       maxValue = validValues.length > 0 ? Math.max(...validValues, chart.yAxis.range[1]) : chart.yAxis.range[1]
     }
 
-    const minValue = Math.min(0, chart.yAxis.range[0])
-    const valueRange = maxValue - minValue
+    // Apply global limits if enabled
+    let minValue = Math.min(0, chart.yAxis.range[0])
+    let valueRange = maxValue - minValue
+
+    if (chart.globalLimits && chart.globalLimits.enabled) {
+      minValue = chart.globalLimits.min
+      maxValue = chart.globalLimits.max
+      valueRange = maxValue - minValue
+    }
 
     if (allBars.length === 0) {
       console.log("[v0] No valid bars to render")
@@ -372,7 +379,13 @@ export function ChartRenderer({ config }: ChartRendererProps) {
           console.log("[v0] Rendering group:", groupName, "with", groupBars.length, "bars")
 
           groupBars.forEach((bar, barIndexInGroup) => {
-            const barHeight = Math.max(0, ((bar.value - minValue) / valueRange) * chartHeight)
+            // Apply global limits to bar value if enabled
+            let displayValue = bar.value
+            if (chart.globalLimits && chart.globalLimits.enabled) {
+              displayValue = Math.max(chart.globalLimits.min, Math.min(chart.globalLimits.max, bar.value))
+            }
+            
+            const barHeight = Math.max(0, ((displayValue - minValue) / valueRange) * chartHeight)
             const y = height - margin.bottom - barHeight
 
             const individualBarWidth = bar.width ? barWidth * bar.width : barWidth
@@ -423,7 +436,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
               valueLabel.setAttribute("y", (y - 5).toString())
               valueLabel.setAttribute("text-anchor", "middle")
               valueLabel.setAttribute("class", "value-label")
-              valueLabel.textContent = bar.value.toString()
+              valueLabel.textContent = displayValue.toString()
               svg.appendChild(valueLabel)
             }
 
