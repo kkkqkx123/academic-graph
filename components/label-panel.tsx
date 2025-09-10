@@ -111,7 +111,7 @@ export function LabelPanel({ config, onConfigChange }: LabelPanelProps) {
             </div>
           ))}
           {config.labels.length === 0 && (
-            <div className="text-center text-muted-foreground py-8">暂无标签，点击"添加标签"创建第一个标签</div>
+            <div className="text-center text-muted-foreground py-8">暂无标签，点击&quot;添加标签&quot;创建第一个标签</div>
           )}
         </CardContent>
       </Card>

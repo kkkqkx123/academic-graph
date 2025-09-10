@@ -55,9 +55,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
     const svg = svgRef.current
     const { chart, style } = config
 
-    console.log("[v0] Chart type:", chart.type)
-    console.log("[v0] Chart bars:", chart.bars)
-
+  
     // Chart dimensions
     const width = 800
     const height = 600
@@ -83,8 +81,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
     }
 
     const isStackedChart = chart.type === "stackedPercentage"
-    console.log("[v0] Is stacked chart:", isStackedChart)
-
+  
     let allBars: ChartBar[] = []
     let maxValue = 0
 
@@ -102,8 +99,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
           }
           return false
         })
-        console.log("[v0] Filtered stacked bars:", allBars)
-        // For stacked percentage, max value is always 100%
+                // For stacked percentage, max value is always 100%
         maxValue = 100
       }
     } else {
@@ -128,8 +124,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
           })
           .filter((bar) => bar && typeof bar.value === "number")
 
-        console.log("[v0] Using chart.bars directly:", allBars)
-      }
+              }
 
       // If no valid bars found and groups exist, try group structure
       if (allBars.length === 0 && chart.groups && Array.isArray(chart.groups) && chart.groups.length > 0) {
@@ -139,8 +134,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
             allBars = allBars.concat(validBars)
           }
         })
-        console.log("[v0] Using group structure:", allBars)
-      }
+              }
 
       const validValues = allBars.map((bar) => bar.value).filter((val) => typeof val === "number")
       maxValue = validValues.length > 0 ? Math.max(...validValues, chart.yAxis.range[1]) : chart.yAxis.range[1]
@@ -157,8 +151,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
     }
 
     if (allBars.length === 0) {
-      console.log("[v0] No valid bars to render")
-      // Create a message indicating no data
+            // Create a message indicating no data
       const noDataText = document.createElementNS("http://www.w3.org/2000/svg", "text")
       noDataText.setAttribute("x", (width / 2).toString())
       noDataText.setAttribute("y", (height / 2).toString())
@@ -269,23 +262,19 @@ export function ChartRenderer({ config }: ChartRendererProps) {
     }
 
     if (isStackedChart && allBars.length > 0) {
-      console.log("[v0] Rendering stacked chart with", allBars.length, "bars")
-      const barSpacing = (chartWidth / allBars.length) * 0.3
+            const barSpacing = (chartWidth / allBars.length) * 0.3
       const barWidth = (chartWidth / allBars.length) * 0.7
 
       allBars.forEach((bar, barIndex) => {
         if (!bar || !Array.isArray(bar.values) || bar.values.length === 0) {
-          console.log("[v0] Skipping invalid bar:", bar)
-          return
+                    return
         }
 
-        console.log("[v0] Rendering bar", barIndex, "with values:", bar.values)
-
+        
         const x = margin.left + barIndex * (barWidth + barSpacing) + barSpacing / 2
         const totalValue = bar.values.reduce((sum, val) => sum + (typeof val === "number" ? val : 0), 0)
 
-        console.log("[v0] Total value for bar", barIndex, ":", totalValue)
-
+        
         let cumulativeHeight = 0
 
         bar.values.forEach((value, segmentIndex) => {
@@ -295,17 +284,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
           const segmentHeight = (percentage / 100) * chartHeight
           const y = height - margin.bottom - cumulativeHeight - segmentHeight
 
-          console.log(
-            "[v0] Segment",
-            segmentIndex,
-            "- value:",
-            value,
-            "percentage:",
-            percentage,
-            "height:",
-            segmentHeight,
-          )
-
+  
           // Create segment rectangle
           const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect")
           rect.setAttribute("x", x.toString())
@@ -337,14 +316,10 @@ export function ChartRenderer({ config }: ChartRendererProps) {
         svg.appendChild(barLabel)
       })
     } else {
-      console.log("[v0] Rendering regular bars, total bars:", allBars.length)
-
       const validBars = allBars.filter((bar) => bar && typeof bar.value === "number" && bar.name)
-      console.log("[v0] Valid bars for rendering:", validBars.length)
+      const groupedBars = new Map<string, any[]>()
 
       if (validBars.length > 0) {
-        // Group bars by their group property
-        const groupedBars = new Map<string, any[]>()
         validBars.forEach((bar) => {
           const groupName = bar.group || "default"
           if (!groupedBars.has(groupName)) {
@@ -352,8 +327,6 @@ export function ChartRenderer({ config }: ChartRendererProps) {
           }
           groupedBars.get(groupName)!.push(bar)
         })
-
-        console.log("[v0] Grouped bars:", Array.from(groupedBars.entries()))
 
         // Calculate spacing and positioning
         const groups = Array.from(groupedBars.entries())
@@ -371,13 +344,11 @@ export function ChartRenderer({ config }: ChartRendererProps) {
         const availableBarSpace = chartWidth - totalGapSpace
         const barWidth = availableBarSpace / totalBars
 
-        console.log("[v0] Group spacing - intra:", intraGroupGap, "inter:", interGroupGap, "barWidth:", barWidth)
-
+  
         let currentX = margin.left
 
         groups.forEach(([groupName, groupBars], groupIndex) => {
-          console.log("[v0] Rendering group:", groupName, "with", groupBars.length, "bars")
-
+  
           groupBars.forEach((bar, barIndexInGroup) => {
             // Apply global limits to bar value if enabled
             let displayValue = bar.value
@@ -389,17 +360,6 @@ export function ChartRenderer({ config }: ChartRendererProps) {
             const y = height - margin.bottom - barHeight
 
             const individualBarWidth = bar.width ? barWidth * bar.width : barWidth
-
-            console.log(
-              "[v0] Rendering bar:",
-              bar.name,
-              "at x:",
-              currentX,
-              "group:",
-              groupName,
-              "width:",
-              individualBarWidth,
-            )
 
             const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect")
             rect.setAttribute("x", currentX.toString())
