@@ -16,6 +16,8 @@ interface ChartBar {
   borderWidth?: number
   width?: number
   segmentColors?: string[]
+  fillPattern?: "grid" | "solid" | "diagonal" | "hollow"
+  shape?: "rectangle" | "rounded"
 }
 
 interface ChartRendererProps {
@@ -80,7 +82,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
       svg.appendChild(background)
     }
 
-    const isStackedChart = chart.type === "stackedPercentage"
+    const isStackedChart = chart.type === "stacked-percentage"
   
     let allBars: ChartBar[] = []
     let maxValue = 0
@@ -91,10 +93,11 @@ export function ChartRenderer({ config }: ChartRendererProps) {
         allBars = chart.bars.filter((bar) => {
           if (!bar) return false
           // For stacked charts, check if bar has values array OR convert single value to array
-          if (Array.isArray(bar.values) && bar.values.length > 0) {
+          if (Array.isArray(bar.value) && bar.value.length > 0) {
             return true
           } else if (typeof bar.value === "number") {
-            bar.values = [bar.value]
+            const typedBar = bar as ChartBar
+            typedBar.values = [bar.value]
             return true
           }
           return false
@@ -106,35 +109,21 @@ export function ChartRenderer({ config }: ChartRendererProps) {
       // Regular chart logic - handle both grouped and ungrouped bars
       if (chart.bars && Array.isArray(chart.bars)) {
         allBars = chart.bars
+          .filter((bar): bar is ChartBar => bar != null)
           .map((bar) => {
-            if (!bar) return null
-
             // If bar has array values (from stacked mode), convert to single value
             if (Array.isArray(bar.value)) {
               const singleValue = bar.value.reduce((sum, val) => sum + (typeof val === "number" ? val : 0), 0)
               return { ...bar, value: singleValue }
             }
-
-            // If bar has single value, keep as is
-            if (typeof bar.value === "number") {
-              return bar
-            }
-
-            return null
+            return bar
           })
-          .filter((bar) => bar && typeof bar.value === "number")
+          .filter((bar) => typeof bar.value === "number")
 
               }
 
-      // If no valid bars found and groups exist, try group structure
-      if (allBars.length === 0 && chart.groups && Array.isArray(chart.groups) && chart.groups.length > 0) {
-        chart.groups.forEach((group) => {
-          if (group && group.bars && Array.isArray(group.bars)) {
-            const validBars = group.bars.filter((bar) => bar && typeof bar.value === "number")
-            allBars = allBars.concat(validBars)
-          }
-        })
-              }
+      // If no valid bars found and groups exist, use bars directly
+      // Note: ChartConfig.groups only contains name and color, bars are in chart.bars
 
       const validValues = allBars.map((bar) => bar.value).filter((val) => typeof val === "number")
       maxValue = validValues.length > 0 ? Math.max(...validValues, chart.yAxis.range[1]) : chart.yAxis.range[1]
@@ -292,15 +281,60 @@ export function ChartRenderer({ config }: ChartRendererProps) {
           rect.setAttribute("width", barWidth.toString())
           rect.setAttribute("height", segmentHeight.toString())
 
-          // Use segment color if available
-          if (bar.segmentColors && bar.segmentColors[segmentIndex]) {
-            rect.setAttribute("fill", bar.segmentColors[segmentIndex])
+          // Apply fill pattern for stacked bars
+          if (bar.fillPattern === "hollow") {
+            rect.setAttribute("fill", "none")
+          } else if (bar.fillPattern === "grid" || bar.fillPattern === "diagonal") {
+            rect.setAttribute("fill", bar.segmentColors?.[segmentIndex] || "#3b82f6")
+            // Add pattern overlay
+            const patternId = `pattern-${bar.fillPattern}-${barIndex}-${segmentIndex}`
+            const defs = svg.querySelector("defs") || document.createElementNS("http://www.w3.org/2000/svg", "defs")
+            if (!svg.querySelector("defs")) {
+              svg.insertBefore(defs, svg.firstChild)
+            }
+            
+            const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern")
+            pattern.setAttribute("id", patternId)
+            pattern.setAttribute("patternUnits", "userSpaceOnUse")
+            pattern.setAttribute("width", "8")
+            pattern.setAttribute("height", "8")
+            
+            if (bar.fillPattern === "grid") {
+              const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
+              path.setAttribute("d", "M 8 0 L 0 0 0 8")
+              path.setAttribute("fill", "none")
+              path.setAttribute("stroke", bar.borderColor || "#333")
+              path.setAttribute("stroke-width", (bar.borderWidth || 1).toString())
+              pattern.appendChild(path)
+            } else if (bar.fillPattern === "diagonal") {
+              const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
+              path.setAttribute("d", "M 0 8 L 8 0")
+              path.setAttribute("fill", "none")
+              path.setAttribute("stroke", bar.borderColor || "#333")
+              path.setAttribute("stroke-width", (bar.borderWidth || 1).toString())
+              pattern.appendChild(path)
+            }
+            
+            defs.appendChild(pattern)
+            rect.setAttribute("fill", `url(#${patternId})`)
           } else {
-            rect.setAttribute("class", `bar bar-${segmentIndex % 5}`)
+            // Solid fill
+            if (bar.segmentColors && bar.segmentColors[segmentIndex]) {
+              rect.setAttribute("fill", bar.segmentColors[segmentIndex])
+            } else {
+              rect.setAttribute("class", `bar bar-${segmentIndex % 5}`)
+            }
           }
 
-          rect.setAttribute("stroke", style.borderColor || "#333")
-          rect.setAttribute("stroke-width", (style.borderWidth || 1).toString())
+          // Apply border
+          rect.setAttribute("stroke", bar.borderColor || "#333")
+          rect.setAttribute("stroke-width", (bar.borderWidth || 1).toString())
+
+          // Apply shape
+          if (bar.shape === "rounded") {
+            rect.setAttribute("rx", "4")
+            rect.setAttribute("ry", "4")
+          }
           svg.appendChild(rect)
 
           cumulativeHeight += segmentHeight
@@ -317,7 +351,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
       })
     } else {
       const validBars = allBars.filter((bar) => bar && typeof bar.value === "number" && bar.name)
-      const groupedBars = new Map<string, any[]>()
+      const groupedBars = new Map<string, ChartBar[]>()
 
       if (validBars.length > 0) {
         validBars.forEach((bar) => {
@@ -334,26 +368,36 @@ export function ChartRenderer({ config }: ChartRendererProps) {
         const totalBars = validBars.length
 
         // Get gap settings from config (with defaults)
-        const intraGroupGap = config.chart.intraGroupGap || 10 // Gap within groups
-        const interGroupGap = config.chart.interGroupGap || 30 // Gap between groups
+        const intraGroupGap = config.chart.barGaps?.intraGroup || 0.1 // Gap within groups
+        const interGroupGap = config.chart.barGaps?.interGroup || 0.3 // Gap between groups
 
         // Calculate available space and bar width
         const totalIntraGaps = totalBars - totalGroups // Gaps within all groups
-        const totalInterGaps = totalGroups - 1 // Gaps between groups
+        const totalInterGaps = Math.max(0, totalGroups - 1) // Gaps between groups
         const totalGapSpace = totalIntraGaps * intraGroupGap + totalInterGaps * interGroupGap
-        const availableBarSpace = chartWidth - totalGapSpace
-        const barWidth = availableBarSpace / totalBars
+        const availableBarSpace = Math.max(0, chartWidth - totalGapSpace)
+        const barWidth = totalBars > 0 ? availableBarSpace / totalBars : 0
 
-  
+        // Get group colors mapping
+        const groupColors = new Map<string, string>()
+        if (config.chart.groups) {
+          config.chart.groups.forEach(group => {
+            groupColors.set(group.name, group.color || "#3b82f6")
+          })
+        }
+
         let currentX = margin.left
 
         groups.forEach(([groupName, groupBars], groupIndex) => {
-  
+          // Calculate group start and end positions for label positioning
+          const groupStartX = currentX
+          let groupEndX = currentX
+
           groupBars.forEach((bar, barIndexInGroup) => {
             // Apply global limits to bar value if enabled
-            let displayValue = bar.value
+            let displayValue = typeof bar.value === "number" ? bar.value : 0
             if (chart.globalLimits && chart.globalLimits.enabled) {
-              displayValue = Math.max(chart.globalLimits.min, Math.min(chart.globalLimits.max, bar.value))
+              displayValue = Math.max(chart.globalLimits.min, Math.min(chart.globalLimits.max, displayValue))
             }
             
             const barHeight = Math.max(0, ((displayValue - minValue) / valueRange) * chartHeight)
@@ -367,15 +411,58 @@ export function ChartRenderer({ config }: ChartRendererProps) {
             rect.setAttribute("width", individualBarWidth.toString())
             rect.setAttribute("height", barHeight.toString())
 
-            // Use individual bar color if available, otherwise use theme colors
-            if (bar.color) {
-              rect.setAttribute("fill", bar.color)
-              rect.setAttribute("stroke", style.borderColor || "#333")
-              rect.setAttribute("stroke-width", (style.borderWidth || 1).toString())
+            // Determine bar color - use group color if no individual color specified
+            const barColor = bar.color || groupColors.get(groupName) || "#3b82f6"
+
+            // Apply fill pattern
+            if (bar.fillPattern === "hollow") {
+              rect.setAttribute("fill", "none")
+            } else if (bar.fillPattern === "grid" || bar.fillPattern === "diagonal") {
+              rect.setAttribute("fill", barColor)
+              // Add pattern overlay
+              const patternId = `pattern-${bar.fillPattern}-${groupIndex}-${barIndexInGroup}`
+              const defs = svg.querySelector("defs") || document.createElementNS("http://www.w3.org/2000/svg", "defs")
+              if (!svg.querySelector("defs")) {
+                svg.insertBefore(defs, svg.firstChild)
+              }
+              
+              const pattern = document.createElementNS("http://www.w3.org/2000/svg", "pattern")
+              pattern.setAttribute("id", patternId)
+              pattern.setAttribute("patternUnits", "userSpaceOnUse")
+              pattern.setAttribute("width", "8")
+              pattern.setAttribute("height", "8")
+              
+              if (bar.fillPattern === "grid") {
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
+                path.setAttribute("d", "M 8 0 L 0 0 0 8")
+                path.setAttribute("fill", "none")
+                path.setAttribute("stroke", bar.borderColor || "#333")
+                path.setAttribute("stroke-width", (bar.borderWidth || 1).toString())
+                pattern.appendChild(path)
+              } else if (bar.fillPattern === "diagonal") {
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path")
+                path.setAttribute("d", "M 0 8 L 8 0")
+                path.setAttribute("fill", "none")
+                path.setAttribute("stroke", bar.borderColor || "#333")
+                path.setAttribute("stroke-width", (bar.borderWidth || 1).toString())
+                pattern.appendChild(path)
+              }
+              
+              defs.appendChild(pattern)
+              rect.setAttribute("fill", `url(#${patternId})`)
             } else {
-              // Use a consistent color index based on the bar's position in the entire dataset
-              const globalBarIndex = validBars.findIndex((b) => b === bar)
-              rect.setAttribute("class", `bar bar-${globalBarIndex % 5}`)
+              // Solid fill
+              rect.setAttribute("fill", barColor)
+            }
+
+            // Apply border
+            rect.setAttribute("stroke", bar.borderColor || "#333")
+            rect.setAttribute("stroke-width", (bar.borderWidth || 1).toString())
+
+            // Apply shape
+            if (bar.shape === "rounded") {
+              rect.setAttribute("rx", "4")
+              rect.setAttribute("ry", "4")
             }
 
             svg.appendChild(rect)
@@ -396,7 +483,14 @@ export function ChartRenderer({ config }: ChartRendererProps) {
               valueLabel.setAttribute("y", (y - 5).toString())
               valueLabel.setAttribute("text-anchor", "middle")
               valueLabel.setAttribute("class", "value-label")
-              valueLabel.textContent = displayValue.toString()
+              
+              let displayText = displayValue.toString()
+              if (chart.yAxis.usePercent) {
+                displayText = `${displayValue}%`
+              } else if (chart.xAxis.useDecimal) {
+                displayText = displayValue.toFixed(1)
+              }
+              valueLabel.textContent = displayText
               svg.appendChild(valueLabel)
             }
 
@@ -407,7 +501,22 @@ export function ChartRenderer({ config }: ChartRendererProps) {
             if (barIndexInGroup < groupBars.length - 1) {
               currentX += intraGroupGap
             }
+
+            groupEndX = currentX
           })
+
+          // Add group label if there are multiple groups
+          if (totalGroups > 1) {
+            const groupLabel = document.createElementNS("http://www.w3.org/2000/svg", "text")
+            const groupWidth = groupEndX - groupStartX
+            groupLabel.setAttribute("x", (groupStartX + groupWidth / 2).toString())
+            groupLabel.setAttribute("y", (height - margin.bottom + 40).toString())
+            groupLabel.setAttribute("text-anchor", "middle")
+            groupLabel.setAttribute("class", "bar-label")
+            groupLabel.setAttribute("font-weight", "bold")
+            groupLabel.textContent = groupName
+            svg.appendChild(groupLabel)
+          }
 
           // Add inter-group gap if not the last group
           if (groupIndex < groups.length - 1) {
@@ -443,7 +552,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
     const fontFamily = config.style.fontFamily || "times"
     const fontSize = config.style.fontSize || 12
     const borderWidth = config.style.borderWidth || 1
-    const textColor = config.style.textColor || "#000"
+    const textColor = "#000"
 
     let fontFamilyCSS = "'Times New Roman', serif"
     switch (fontFamily) {
@@ -502,8 +611,8 @@ export function ChartRenderer({ config }: ChartRendererProps) {
       }
       .grid-line { 
         stroke: #ddd; 
-        stroke-width: ${config.style.gridThickness || 0.5}px; 
-        stroke-opacity: ${config.style.gridOpacity || 0.3}; 
+        stroke-width: ${config.chart.gridLines.thickness || 0.5}px; 
+        stroke-opacity: ${config.chart.gridLines.opacity || 0.3}; 
         stroke-dasharray: 2,2; 
         display: ${config.style.showGrid === false ? "none" : "block"};
       }
@@ -520,13 +629,14 @@ export function ChartRenderer({ config }: ChartRendererProps) {
         return baseStyles // Return base styles if no valid bars
       }
 
-      const maxValue = Math.max(...validBars.map((bar) => bar.value))
-      const minValue = Math.min(...validBars.map((bar) => bar.value))
+      const maxValue = Math.max(...validBars.map((bar) => typeof bar.value === "number" ? bar.value : 0))
+      const minValue = Math.min(...validBars.map((bar) => typeof bar.value === "number" ? bar.value : 0))
       const valueRange = maxValue - minValue || 1 // Avoid division by zero
 
       let grayscaleStyles = baseStyles
       validBars.forEach((bar, index) => {
-        const intensity = valueRange > 0 ? (bar.value - minValue) / valueRange : 0.5
+        const barValue = typeof bar.value === "number" ? bar.value : 0
+        const intensity = valueRange > 0 ? (barValue - minValue) / valueRange : 0.5
         const grayValue = Math.round(255 - intensity * 180) // Range from 75 to 255
         const grayColor = `rgb(${grayValue}, ${grayValue}, ${grayValue})`
 
@@ -673,7 +783,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
         const error = await response.json()
         alert(error.message || "PNG导出失败")
       }
-    } catch (error) {
+    } catch {
       alert("PNG导出失败")
     }
   }
@@ -681,6 +791,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
   // Auto-render when config changes
   useEffect(() => {
     renderChart()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config])
 
   return (
@@ -723,7 +834,7 @@ export function ChartRenderer({ config }: ChartRendererProps) {
           <CardTitle>渲染说明</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>• 图表会根据配置自动更新，也可以手动点击"重新渲染"按钮</p>
+          <p>• 图表会根据配置自动更新，也可以手动点击&quot;重新渲染&quot;按钮</p>
           <p>• 支持导出SVG格式（矢量图，适合学术论文）和PNG格式（位图）</p>
           <p>• 图表样式遵循学术期刊标准，使用Times New Roman字体</p>
           <p>• 背景保持透明，便于在文档中使用</p>

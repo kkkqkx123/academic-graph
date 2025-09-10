@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分组柱状图测试</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        .svg-container {
+            border: 1px solid #ccc;
+            margin: 10px 0;
+            text-align: center;
+        }
+        .description {
+            background-color: #f9f9f9;
+            padding: 10px;
+            border-left: 4px solid #007acc;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>分组柱状图功能测试</h1>
+        
+        <div class="test-section">
+            <h3>测试1: 基本分组功能</h3>
+            <div class="description">
+                测试两个分组，每个分组包含3个柱子，验证分组颜色是否正确应用
+            </div>
+            <div class="svg-container">
+                <svg id="test1" width="800" height="400" style="border: 1px solid #ccc;"></svg>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>测试2: 单分组功能</h3>
+            <div class="description">
+                测试单个分组的情况，验证是否正常工作
+            </div>
+            <div class="svg-container">
+                <svg id="test2" width="800" height="400" style="border: 1px solid #ccc;"></svg>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>测试3: 三组分组功能</h3>
+            <div class="description">
+                测试三个分组，验证间距和标签显示
+            </div>
+            <div class="svg-container">
+                <svg id="test3" width="800" height="400" style="border: 1px solid #ccc;"></svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 测试数据
+        const testConfigs = {
+            test1: {
+                chart: {
+                    type: "bar",
+                    title: "测试1: 两组对比",
+                    xAxis: { label: "类别", unit: "", range: [0, 100], useDecimal: true },
+                    yAxis: { label: "数值", unit: "个", range: [0, 100], usePercent: false },
+                    bars: [
+                        { name: "A1", value: 30, group: "实验组" },
+                        { name: "A2", value: 45, group: "实验组" },
+                        { name: "A3", value: 25, group: "实验组" },
+                        { name: "B1", value: 20, group: "对照组" },
+                        { name: "B2", value: 35, group: "对照组" },
+                        { name: "B3", value: 40, group: "对照组" }
+                    ],
+                    groups: [
+                        { name: "实验组", color: "#e74c3c" },
+                        { name: "对照组", color: "#3498db" }
+                    ],
+                    barGaps: { intraGroup: 0.1, interGroup: 0.3 },
+                    globalLimits: { min: 0, max: 100, enabled: true },
+                    showValue: true
+                }
+            },
+            test2: {
+                chart: {
+                    type: "bar",
+                    title: "测试2: 单组数据",
+                    xAxis: { label: "项目", unit: "", range: [0, 100], useDecimal: true },
+                    yAxis: { label: "得分", unit: "分", range: [0, 100], usePercent: false },
+                    bars: [
+                        { name: "项目1", value: 75, group: "默认组" },
+                        { name: "项目2", value: 60, group: "默认组" },
+                        { name: "项目3", value: 85, group: "默认组" },
+                        { name: "项目4", value: 45, group: "默认组" }
+                    ],
+                    groups: [
+                        { name: "默认组", color: "#2ecc71" }
+                    ],
+                    barGaps: { intraGroup: 0.1, interGroup: 0.3 },
+                    globalLimits: { min: 0, max: 100, enabled: true },
+                    showValue: true
+                }
+            },
+            test3: {
+                chart: {
+                    type: "bar",
+                    title: "测试3: 三组对比",
+                    xAxis: { label: "指标", unit: "", range: [0, 100], useDecimal: true },
+                    yAxis: { label: "数值", unit: "", range: [0, 100], usePercent: false },
+                    bars: [
+                        { name: "Q1", value: 25, group: "第一季度" },
+                        { name: "Q2", value: 30, group: "第一季度" },
+                        { name: "Q1", value: 35, group: "第二季度" },
+                        { name: "Q2", value: 40, group: "第二季度" },
+                        { name: "Q1", value: 45, group: "第三季度" },
+                        { name: "Q2", value: 50, group: "第三季度" }
+                    ],
+                    groups: [
+                        { name: "第一季度", color: "#9b59b6" },
+                        { name: "第二季度", color: "#f39c12" },
+                        { name: "第三季度", color: "#1abc9c" }
+                    ],
+                    barGaps: { intraGroup: 0.15, interGroup: 0.4 },
+                    globalLimits: { min: 0, max: 100, enabled: true },
+                    showValue: true
+                }
+            }
+        };
+
+        function renderTestChart(svgId, config) {
+            const svg = document.getElementById(svgId);
+            const chart = config.chart;
+            
+            // Clear previous content
+            svg.innerHTML = '';
+            
+            // Chart dimensions
+            const width = 800;
+            const height = 400;
+            const margin = { top: 60, right: 40, bottom: 80, left: 60 };
+            const chartWidth = width - margin.left - margin.right;
+            const chartHeight = height - margin.top - margin.bottom;
+
+            // Create group for chart elements
+            const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            g.setAttribute("transform", `translate(${margin.left}, ${margin.top})`);
+            svg.appendChild(g);
+
+            // Background
+            const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+            bg.setAttribute("width", width);
+            bg.setAttribute("height", height);
+            bg.setAttribute("fill", "white");
+            svg.insertBefore(bg, g);
+
+            // Title
+            const title = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            title.setAttribute("x", width / 2);
+            title.setAttribute("y", 30);
+            title.setAttribute("text-anchor", "middle");
+            title.setAttribute("font-size", "18");
+            title.setAttribute("font-weight", "bold");
+            title.textContent = chart.title;
+            svg.appendChild(title);
+
+            // Group bars by group name
+            const groupedBars = {};
+            chart.bars.forEach(bar => {
+                if (!groupedBars[bar.group]) {
+                    groupedBars[bar.group] = [];
+                }
+                groupedBars[bar.group].push(bar);
+            });
+
+            const groups = Object.entries(groupedBars);
+            const totalBars = chart.bars.length;
+            const totalGroups = groups.length;
+
+            // Calculate dimensions
+            const intraGroupGap = chart.barGaps.intraGroup * 20;
+            const interGroupGap = chart.barGaps.interGroup * 40;
+            
+            const totalIntraGaps = totalBars - totalGroups;
+            const totalInterGaps = Math.max(0, totalGroups - 1);
+            const totalGapSpace = totalIntraGaps * intraGroupGap + totalInterGaps * interGroupGap;
+            const availableBarSpace = Math.max(0, chartWidth - totalGapSpace);
+            const barWidth = totalBars > 0 ? availableBarSpace / totalBars : 0;
+
+            // Get group colors
+            const groupColors = {};
+            chart.groups.forEach(group => {
+                groupColors[group.name] = group.color;
+            });
+
+            // Y-axis
+            const maxValue = Math.max(...chart.bars.map(b => b.value));
+            const yScale = chartHeight / maxValue;
+
+            // Y-axis line
+            const yAxis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            yAxis.setAttribute("x1", 0);
+            yAxis.setAttribute("y1", 0);
+            yAxis.setAttribute("x2", 0);
+            yAxis.setAttribute("y2", chartHeight);
+            yAxis.setAttribute("stroke", "#333");
+            yAxis.setAttribute("stroke-width", "2");
+            g.appendChild(yAxis);
+
+            // X-axis line
+            const xAxis = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            xAxis.setAttribute("x1", 0);
+            xAxis.setAttribute("y1", chartHeight);
+            xAxis.setAttribute("x2", chartWidth);
+            xAxis.setAttribute("y2", chartHeight);
+            xAxis.setAttribute("stroke", "#333");
+            xAxis.setAttribute("stroke-width", "2");
+            g.appendChild(xAxis);
+
+            // Y-axis labels
+            for (let i = 0; i <= 5; i++) {
+                const value = (maxValue / 5) * i;
+                const y = chartHeight - (value * yScale);
+                
+                const tick = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                tick.setAttribute("x1", -5);
+                tick.setAttribute("y1", y);
+                tick.setAttribute("x2", 0);
+                tick.setAttribute("y2", y);
+                tick.setAttribute("stroke", "#333");
+                g.appendChild(tick);
+
+                const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                label.setAttribute("x", -10);
+                label.setAttribute("y", y + 5);
+                label.setAttribute("text-anchor", "end");
+                label.setAttribute("font-size", "12");
+                label.textContent = Math.round(value);
+                g.appendChild(label);
+            }
+
+            // Render bars
+            let currentX = 0;
+            groups.forEach(([groupName, groupBars], groupIndex) => {
+                const groupStartX = currentX;
+                let groupEndX = currentX;
+
+                groupBars.forEach((bar, barIndex) => {
+                    const barHeight = bar.value * yScale;
+                    const barColor = bar.color || groupColors[groupName] || "#3b82f6";
+
+                    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                    rect.setAttribute("x", currentX);
+                    rect.setAttribute("y", chartHeight - barHeight);
+                    rect.setAttribute("width", barWidth);
+                    rect.setAttribute("height", barHeight);
+                    rect.setAttribute("fill", barColor);
+                    rect.setAttribute("stroke", "#333");
+                    rect.setAttribute("stroke-width", "1");
+                    g.appendChild(rect);
+
+                    // Bar label
+                    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    label.setAttribute("x", currentX + barWidth / 2);
+                    label.setAttribute("y", chartHeight + 20);
+                    label.setAttribute("text-anchor", "middle");
+                    label.setAttribute("font-size", "12");
+                    label.textContent = bar.name;
+                    g.appendChild(label);
+
+                    // Value label
+                    if (chart.showValue) {
+                        const valueLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                        valueLabel.setAttribute("x", currentX + barWidth / 2);
+                        valueLabel.setAttribute("y", chartHeight - barHeight - 5);
+                        valueLabel.setAttribute("text-anchor", "middle");
+                        valueLabel.setAttribute("font-size", "10");
+                        valueLabel.setAttribute("font-weight", "bold");
+                        valueLabel.textContent = bar.value;
+                        g.appendChild(valueLabel);
+                    }
+
+                    currentX += barWidth;
+                    if (barIndex < groupBars.length - 1) {
+                        currentX += intraGroupGap;
+                    }
+                    groupEndX = currentX;
+                });
+
+                // Group label
+                if (totalGroups > 1) {
+                    const groupLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                    const groupWidth = groupEndX - groupStartX;
+                    groupLabel.setAttribute("x", groupStartX + groupWidth / 2);
+                    groupLabel.setAttribute("y", chartHeight + 40);
+                    groupLabel.setAttribute("text-anchor", "middle");
+                    groupLabel.setAttribute("font-size", "14");
+                    groupLabel.setAttribute("font-weight", "bold");
+                    groupLabel.textContent = groupName;
+                    g.appendChild(groupLabel);
+                }
+
+                if (groupIndex < groups.length - 1) {
+                    currentX += interGroupGap;
+                }
+            });
+        }
+
+        // Render all test charts
+        Object.keys(testConfigs).forEach(testId => {
+            renderTestChart(testId, testConfigs[testId]);
+        });
+    </script>
+</body>
+</html>

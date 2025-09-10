@@ -402,7 +402,7 @@ export function StylePanel({ config, onConfigChange }: StylePanelProps) {
                   min="0"
                   max="1"
                   step="0.1"
-                  value={config.style.gridOpacity || 0.3}
+                  value={(config.style as unknown as Record<string, number>).gridOpacity || 0.3}
                   onChange={(e) => updateStyle("gridOpacity", Number(e.target.value))}
                 />
                 <p className="text-xs text-muted-foreground">0.0 (完全透明) - 1.0 (完全不透明)</p>
@@ -415,7 +415,7 @@ export function StylePanel({ config, onConfigChange }: StylePanelProps) {
                   min="0.1"
                   max="3"
                   step="0.1"
-                  value={config.style.gridThickness || 0.5}
+                  value={(config.style as unknown as Record<string, number>).gridThickness || 0.5}
                   onChange={(e) => updateStyle("gridThickness", Number(e.target.value))}
                 />
                 <p className="text-xs text-muted-foreground">线条粗细 (像素)</p>
